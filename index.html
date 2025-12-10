@@ -45,9 +45,59 @@
     .row{display:flex;gap:10px;flex-wrap:wrap}
     .kpi{flex:1 1 130px}
     .hero{display:flex;justify-content:space-between;align-items:center}
-  </style>
+    /* --- Animations & Visual Enhancements --- */
+  .card{transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease}
+  .card:hover{transform:translateY(-3px); box-shadow:0 16px 40px rgba(0,0,0,.35)}
+  .panel{opacity:0; transform:translateY(8px); transition:opacity .45s ease, transform .45s ease}
+  .panel.active{opacity:1; transform:translateY(0)}
+  .dot{transition:transform .25s ease, background .25s ease}
+  .dot.active{transform:scale(1.2)}
+  .tabs .tab{transition:opacity .25s ease, border-color .25s ease}
+
+  /* Floating accent blobs */
+  .blob{position:fixed; inset:auto; width:60vmax; height:60vmax; border-radius:50%; filter:blur(48px); pointer-events:none; z-index:0; opacity:.12; mix-ble </head>
+<body>
+
+  <!-- Decorative animated blobs + loader -->
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div id="loader"><span>UrbanEye</span></div>isual Enhancements --- */
+  .card{transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease}
+  .card:hover{transform:translateY(-3px); box-shadow:0 16px 40px rgba(0,0,0,.35)}
+  .panel{opacity:0; transform:translateY(8px); transition:opacity .45s ease, transform .45s ease}
+  .panel.active{opacity:1; transform:translateY(0)}
+  .dot{transition:transform .25s ease, background .25s ease}
+  .dot.active{transform:scale(1.2)}
+  .tabs .tab{transition:opacity .25s ease, border-color .25s ease}
+
+  /* Floating accent blobs */
+  .blob{position:fixed; inset:auto; width:60vmax; height:60vmax; border-radius:50%; filter:blur(48px); pointer-events:none; z-index:0; opacity:.12; mix-blend:screen}
+  .blob.b1{left:-10vmax; top:-10vmax; background:radial-gradient(circle at 40% 40%, var(--accent), transparent 60%); animation:floatBlob 12s ease-in-out infinite}
+  .blob.b2{right:-12vmax; bottom:-14vmax; background:radial-gradient(circle at 60% 60%, var(--accent), transparent 60%); animation:floatBlob 14s ease-in-out reverse infinite}
+  @keyframes floatBlob{0%{transform:translate(0,0) scale(1)}50%{transform:translate(2vmax,-1vmax) scale(1.05)}100%{transform:translate(0,0) scale(1)}}
+
+  /* Loader */
+  #loader{position:fixed;inset:0;display:grid;place-items:center;background:rgba(8,12,20,.94);z-index:50;color:var(--text);font-weight:700;letter-spacing:.06em}
+  #loader span{padding:14px 18px;border:1px solid var(--ring);border-radius:14px;background:linear-gradient(180deg,#0f172a,#0b1321);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+  #loader.hide{animation:fadeOut .5s ease forwards}
+  @keyframes fadeOut{to{opacity:0;visibility:hidden}}
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce){
+    .track{transition:none}
+    .panel{transition:none}
+    .card{transition:none}
+    .blob{display:none}
+    #loader.hide{animation:none; display:none}
+  }
+</style>
 </head>
 <body>
+
+  <!-- Decorative animated blobs + loader -->
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+  <div id="loader"><span>UrbanEye</span></div>
   <div class="app" id="app">
     <header>
       <div class="brand" style="display:flex;align-items:center;gap:10px">
@@ -63,7 +113,7 @@
       <div class="pill">Swipe ◀ ▶ or use ← →</div>
     </header>
 
-    <div class="viewport" id="viewport" tabindex="0">
+    <div class="viewport" id="viewport" style="position:relative; z-index:1">
       <div class="track" id="track">
         <!-- HEALTH -->
         <section class="panel" data-name="Health">
@@ -256,29 +306,16 @@
 
     let index = 0; // 0..3
     function render(){
-      track.style.transform = `translateX(${-100*index}%)`;
-      dots.forEach((d,i)=>d.classList.toggle('active', i===index));
-      tabs.forEach((t,i)=>{
-        const on = i===index; t.classList.toggle('active', on);
-        t.style.background = on? '#0e1a2d' : '#0b1321';
-        t.style.borderColor = on? '#2a3a55' : '#1f2937';
-        t.style.color = on? '#e5e7eb' : '#c8d1df';
-      });
-      const theme = THEMES[index];
-      document.title = `UrbanEye — ${panels[index].dataset.name}`;
-      document.documentElement.style.setProperty('--accent', theme.accent);
-      document.documentElement.style.setProperty('--bg1', theme.bg1);
-      document.documentElement.style.setProperty('--bg2', theme.bg2);
-    }%)`;
-      dots.forEach((d,i)=>d.classList.toggle('active', i===index));
-      tabs.forEach((t,i)=>{
-        t.style.background = i===index? '#0e1a2d' : '#0b1321';
-        t.style.borderColor = i===index? '#2a3a55' : '#1f2937';
-        t.style.color = i===index? '#e5e7eb' : '#c8d1df';
-      });
-      document.title = `UrbanEye — ${panels[index].dataset.name}`;
-    }
-    render();
+    track.style.transform = `translateX(${-100*index}%)`;
+    dots.forEach((d,i)=>d.classList.toggle('active',i===index));
+    tabs.forEach((t,i)=>t.classList.toggle('active',i===index));
+    panels.forEach((p,i)=>p.classList.toggle('active',i===index));
+    const theme = THEMES[index];
+    document.documentElement.style.setProperty('--accent', theme.accent);
+    document.documentElement.style.setProperty('--bg', theme.bg1);
+    document.documentElement.style.setProperty('--bg2', theme.bg2);
+  }
+  render();
 
     function go(dir){ // dir = +1 / -1
       index = (index + dir + 4) % 4; render();
@@ -322,57 +359,46 @@
       }
     }, {passive:true});
 
-    // --- Mock charts ---
-    const ctxH = document.getElementById('chartHealth');
-    new Chart(ctxH,{type:'line',data:{
-      labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-      datasets:[{label:'AQI',data:[132,118,141,155,162,149,138], tension:.35, borderColor:getComputedStyle(document.documentElement).getPropertyValue('--accentHealth').trim(), backgroundColor:'rgba(248,113,113,.12)', fill:true}]
-    },options:{responsive:true,plugins:{legend:{display:false}}});
+    // Chart mocks with nicer animations
+  Chart.defaults.animations = {colors:{type:'color',duration:800,loop:0},numbers:{type:'number',duration:800,easing:'easeOutQuart'}};
 
-    const ctxE = document.getElementById('chartEnergy');
-    new Chart(ctxE,{type:'bar',data:{
-      labels:[...'0123456789abcdef'.toUpperCase()].slice(0,24).map((_,i)=>`${String(i).padStart(2,'0')}:00`),
-      datasets:[{label:'kWh',data:Array.from({length:24},(_,i)=> (Math.sin((i-8)/3)*8+14 + (i===15?6:0)).toFixed(1)), backgroundColor:getComputedStyle(document.documentElement).getPropertyValue('--accentEnergy').trim()}]
-    },options:{responsive:true,plugins:{legend:{display:false}}});
+  new Chart(chartHealth,{type:'line',data:{
+    labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    datasets:[{label:'AQI',data:[132,118,141,155,162,149,138],
+      borderColor:THEMES[0].accent, backgroundColor:'rgba(248,113,113,.15)', tension:.35, fill:true}]
+  },options:{plugins:{legend:{display:false}},animation:{duration:900}});
 
-    const ctxW = document.getElementById('chartWater');
-    new Chart(ctxW,{type:'line',data:{
-      labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-      datasets:[{label:'kL',data:[2.4,2.1,2.6,2.2,2.7,3.1,2.8],tension:.35, borderColor:getComputedStyle(document.documentElement).getPropertyValue('--accentWater').trim(), backgroundColor:'rgba(96,165,250,.12)', fill:true}]
-    },options:{responsive:true,plugins:{legend:{display:false}}});
+  new Chart(chartEnergy,{type:'bar',data:{
+    labels:[...Array(24)].map((_,i)=>`${i.toString().padStart(2,'0')}:00`),
+    datasets:[{data:[...Array(24)].map((_,i)=>Math.round((Math.sin((i-8)/3)*8+14 + (i===15?6:0))*10)/10), backgroundColor:THEMES[1].accent}]
+  },options:{plugins:{legend:{display:false}},animation:{duration:900}});
 
-    const ctxWa = document.getElementById('chartWaste');
-    new Chart(ctxWa,{type:'bar',data:{
-      labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-      datasets:[{label:'kg',data:[170,162,175,168,182,196,188], backgroundColor:getComputedStyle(document.documentElement).getPropertyValue('--accentWaste').trim()}]
-    },options:{responsive:true,plugins:{legend:{display:false}}});
+  new Chart(chartWater,{type:'line',data:{
+    labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    datasets:[{data:[2.4,2.1,2.6,2.2,2.7,3.1,2.8], borderColor:THEMES[2].accent, backgroundColor:'rgba(96,165,250,.18)', tension:.35, fill:true}]
+  },options:{plugins:{legend:{display:false}},animation:{duration:900}});
 
-    // Live bin status mock
-    const binsRow = document.getElementById('binsRow');
-    const bins = Array.from({length:12},(_,i)=>({id:i+1,fill: Math.floor(20+Math.random()*75)}));
-    bins.forEach(b=>{
-      const el = document.createElement('div');
-      el.className='badge';
-      const color = b.fill>80?'bad':(b.fill>60?'warn':'good');
-      el.innerHTML = `Bin #${String(b.id).padStart(2,'0')} — <span class="${color}">${b.fill}%</span>`;
-      binsRow.appendChild(el);
-    });
+  new Chart(chartWaste,{type:'bar',data:{
+    labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    datasets:[{data:[170,162,175,168,182,196,188], backgroundColor:THEMES[3].accent}]
+  },options:{plugins:{legend:{display:false}},animation:{duration:900}});
 
-    // Small demo: randomize numbers every 6s (still mock)
-    function jitter(id, base, spread){
-      const el = document.getElementById(id);
-      const val = (base + (Math.random()*spread - spread/2));
-      el.textContent = (id==='aqiVal' || id==='binsFull') ? Math.round(Math.abs(val)) : (Math.round(val*10)/10);
-    }
-    setInterval(()=>{
-      jitter('aqiVal',160,12); jitter('healthScore',82,2); jitter('wqi',74,2);
-      jitter('noise',58,3); jitter('energyToday',128,6); jitter('peak',22,2);
-      jitter('reShare',46,3); jitter('co2',412,18); jitter('waterUse',2.8,0.3);
-      jitter('waterWqi',88,2); jitter('leaks',1,1); jitter('pressure',2.9,0.2);
-      jitter('wasteToday',182,12); jitter('recycle',38,2); jitter('binsFull',3,2);
-    },6000);
-  
-    <script>const LOGO='urbaneye-logo.png'; try{document.querySelector('.logo').src=LOGO;}catch(e){}</script>
+  // Bin mock
+  const binsRow=document.getElementById("binsRow");
+  [...Array(12)].forEach((_,i)=>{
+    let fill=Math.floor(20+Math.random()*75);
+    const el=document.createElement("div");
+    el.className="badge";
+    el.innerHTML=`Bin #${String(i+1).padStart(2,'0')} — <span class="${fill>80?'bad':fill>60?'warn':'good'}">${fill}%</span>`;
+    binsRow.appendChild(el);
+  });
+
+  // Loader hide
+  window.addEventListener('load',()=>{
+    const l=document.getElementById('loader'); if(l) l.classList.add('hide');
+  });
+</script>
   </script>
 </body>
 </html>
+
