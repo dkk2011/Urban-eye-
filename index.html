@@ -13,15 +13,15 @@
 
   <style>
     :root{
-      --bg:#0b0f17; --bg2:#0c1320;
       --text:#e5e7eb; --muted:#9aa3b2; --ring:#1f2937;
       --good:#10b981; --warn:#f59e0b; --bad:#ef4444;
       --accent:#60a5fa;
       --accentHealth:#f87171; --accentEnergy:#f59e0b; --accentWater:#60a5fa; --accentWaste:#34d399;
+      --bg1:#0a0e16; --bg2:#0c1320;
     }
 
     *{box-sizing:border-box}
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text);font-family:Inter,system-ui}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg1),var(--bg2));color:var(--text);font-family:Inter,system-ui}
     .app{height:100%;display:flex;flex-direction:column}
 
     header{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #111827;background:rgba(17,24,39,.6);backdrop-filter:blur(6px);position:sticky;top:0;z-index:10}
@@ -52,7 +52,7 @@
     .label{font-size:12px;color:#9aa3b2;text-transform:uppercase;letter-spacing:.18em;margin-bottom:8px}
     canvas{width:100%!important;height:260px!important}
     .subgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-    .badge{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--ring);background:#0c1423;color:#cbd5e1}
+    .badge{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--ring);background:#0c1423;color:#aab3c2}
     .good{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
     .muted{color:var(--muted)}
 
@@ -60,7 +60,7 @@
     .dot{width:8px;height:8px;border-radius:50%;background:#263042;transition:transform .25s, background .25s}
     .dot.active{background:var(--accent);transform:scale(1.2)}
     .tabs{display:flex;gap:8px}
-    .tab{font-size:12px;padding:8px 10px;border-radius:12px;border:1px solid var(--ring);color:#e5e7eb;background:#0b1321;opacity:.75;transition:opacity .25s,border-color .25s}
+    .tab{font-size:12px;padding:8px 10px;border-radius:12px;border:1px solid var(--ring);color:#c8d1df;background:#0b1321;opacity:.85;transition:opacity .25s,border-color .25s}
     .tab.active{opacity:1;border-color:#2a3a55}
     .row{display:flex;gap:10px;flex-wrap:wrap}
     .kpi{flex:1 1 130px}
@@ -97,7 +97,7 @@
   <div class="app" id="app">
     <header>
       <div class="brand" style="display:flex;align-items:center;gap:10px">
-        <!-- Local logo in repo root; bigger, no frame -->
+        <!-- Local logo; bigger, no frame -->
         <img class="logo" alt="UrbanEye logo"
              style="width:72px;height:72px;object-fit:contain;border:none;box-shadow:none"
              src="./urbaneye.png"
@@ -114,7 +114,7 @@
       <div class="track" id="track">
 
         <!-- HEALTH -->
-        <section class="panel" data-name="Health">
+        <section class="panel active" data-name="Health">
           <div class="hero"><h2>Health Overview</h2><span class="badge">Mock Data</span></div>
           <div class="grid">
             <div class="card kpi"><div class="label">AQI</div><div class="metric"><span class="value bad" id="aqiVal">162</span><span class="unit"> US AQI</span></div><div class="muted">Status: Unhealthy</div></div>
@@ -177,6 +177,36 @@
     <button id="navRight">▶</button>
   </div>
 
+  <!-- Chat bubble & panel -->
+  <button id="chatToggle"
+    style="position:fixed; right:16px; bottom:16px; z-index:9999; width:56px; height:56px; border-radius:50%;
+           border:1px solid #1f2937; background:#0b1321; color:#e5e7eb; box-shadow:0 10px 30px rgba(0,0,0,.35);">
+    💬
+  </button>
+
+  <div id="chatPanel" class="chatbox" aria-hidden="true"
+       style="position:fixed; right:16px; bottom:84px; width:320px; max-height:60vh; display:none;
+              background:linear-gradient(180deg,#0f172a,#0b1321); border:1px solid #1f2937;
+              border-radius:16px; box-shadow:0 20px 50px rgba(0,0,0,.45); z-index:9999; overflow:hidden;">
+    <div style="padding:10px 12px; border-bottom:1px solid #1f2937; display:flex; justify-content:space-between; align-items:center;">
+      <div style="font-weight:700">UrbanEye Chat</div>
+      <button id="chatClose" style="background:transparent;color:#9aa3b2;border:none;font-size:18px;cursor:pointer">✕</button>
+    </div>
+
+    <div id="chatMsgs" style="padding:10px 12px; overflow:auto; max-height:38vh; font-size:14px;">
+      <div style="color:#9aa3b2">Ask me about Health, Energy, Water, or Waste.</div>
+    </div>
+
+    <form id="chatForm" class="chatbox" style="display:flex; gap:8px; padding:10px 12px; border-top:1px solid #1f2937;">
+      <input id="chatInput" class="chatbox" autocomplete="off" placeholder="Type a message…"
+             style="flex:1; background:#0a1420; border:1px solid #1f2937; border-radius:10px; color:#e5e7eb; padding:10px;">
+      <button type="submit" class="chatbox"
+              style="background:var(--accent); border:none; color:#0b0f17; font-weight:700; padding:10px 12px; border-radius:10px;">
+        Send
+      </button>
+    </form>
+  </div>
+
   <!-- accent blobs behind everything -->
   <div class="blob b1"></div>
   <div class="blob b2"></div>
@@ -206,7 +236,7 @@
       function applyTheme(){
         const t = THEMES[index] || THEMES[0];
         document.documentElement.style.setProperty('--accent', t.accent);
-        document.documentElement.style.setProperty('--bg', t.bg1);
+        document.documentElement.style.setProperty('--bg1', t.bg1);
         document.documentElement.style.setProperty('--bg2', t.bg2);
       }
 
@@ -247,7 +277,7 @@
       });
       viewport.addEventListener('pointerleave', ()=>{ startX = null; });
 
-      // charts when Chart.js ready
+      // charts
       (function readyCharts(){
         if(!window.Chart){ setTimeout(readyCharts, 50); return; }
 
@@ -305,6 +335,97 @@
       const loader = document.getElementById('loader');
       setTimeout(()=> loader && loader.classList.add('hide'), 1200);
     });
+
+    // ===== Gemini chat client (via Netlify Function using gemini-2.0-flash) =====
+    (() => {
+      const $ = sel => document.querySelector(sel);
+      const panel  = $('#chatPanel');
+      const toggle = $('#chatToggle');
+      const close  = $('#chatClose');
+      const form   = $('#chatForm');
+      const input  = $('#chatInput');
+      const msgs   = $('#chatMsgs');
+
+      let history = JSON.parse(localStorage.getItem('ue_chat') || '[]');
+      history.forEach(addBubble);
+
+      function openChat(){ panel.style.display='block'; panel.setAttribute('aria-hidden','false'); input.focus(); }
+      function closeChat(){ panel.style.display='none'; panel.setAttribute('aria-hidden','true'); }
+
+      toggle.addEventListener('click', () => {
+        const open = panel.getAttribute('aria-hidden') === 'false';
+        open ? closeChat() : openChat();
+      });
+      close.addEventListener('click', closeChat);
+
+      // Pause page nav arrows while typing
+      window.addEventListener('keydown', (e)=>{
+        if (document.activeElement === input) {
+          if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') e.stopPropagation();
+        }
+      }, true);
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = '';
+
+        pushMsg({ role:'user', content:text });
+
+        const thinking = addSystem("Thinking…");
+        try {
+          const res = await fetch('/.netlify/functions/chat', {
+            method: 'POST',
+            headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({ messages: history })
+          });
+          if (!res.ok) throw new Error('Function error');
+          const data = await res.json();
+          thinking.remove();
+          pushMsg({ role:'assistant', content: data.reply || "Sorry, no reply." });
+        } catch (err) {
+          thinking.remove();
+          pushMsg({ role:'assistant', content: "Assistant is not connected yet. (Add the Netlify function.)" });
+          console.warn(err);
+        }
+      });
+
+      function pushMsg(m){
+        history.push(m);
+        localStorage.setItem('ue_chat', JSON.stringify(history.slice(-20)));
+        addBubble(m);
+      }
+
+      function addBubble({role, content}){
+        const el = document.createElement('div');
+        el.style.margin = '8px 0';
+        el.style.lineHeight = '1.35';
+        if (role === 'user') {
+          el.style.textAlign = 'right';
+          el.innerHTML = `<span style="display:inline-block; background:#142235; border:1px solid #1f2937; padding:8px 10px; border-radius:12px;">${escapeHtml(content)}</span>`;
+        } else {
+          el.innerHTML = `<span style="display:inline-block; background:#0f172a; border:1px solid #1f2937; padding:8px 10px; border-radius:12px; color:#d7dfec">${escapeHtml(content)}</span>`;
+        }
+        msgs.appendChild(el);
+        msgs.scrollTop = msgs.scrollHeight;
+      }
+
+      function addSystem(text){
+        const el = document.createElement('div');
+        el.style.margin = '8px 0';
+        el.style.color = '#9aa3b2';
+        el.textContent = text;
+        msgs.appendChild(el);
+        msgs.scrollTop = msgs.scrollHeight;
+        return el;
+      }
+
+      function escapeHtml(s){
+        return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+      }
+    })();
   </script>
 </body>
 </html>
+
