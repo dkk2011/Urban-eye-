@@ -29,9 +29,9 @@
     .pill{font-size:12px;color:#a7b0c0;border:1px solid #1f2937;border-radius:999px;padding:6px 10px;background:#0d1320}
 
     .viewport{position:relative;overflow:hidden;flex:1;user-select:none;z-index:1}
-    .track{display:flex;height:100%;width:400%;transition:transform .45s cubic-bezier(.22,.61,.36,1)}
+    .track{display:flex;height:100%;transition:transform .45s cubic-bezier(.22,.61,.36,1)}
 
-    /* Always visible panels (no blank pages) */
+    /* Always-visible panels to avoid blank states */
     .panel{
       width:100%;padding:16px;display:grid;grid-template-rows:auto auto 1fr;gap:14px;
       opacity:1;transform:none;transition:opacity .45s ease, transform .45s ease;
@@ -50,6 +50,7 @@
     .subgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
     .badge{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--ring);background:#0c1423;color:#cbd5e1}
     .good{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+    .muted{color:var(--muted)}
 
     footer{display:flex;justify-content:center;gap:8px;padding:10px 0 14px}
     .dot{width:8px;height:8px;border-radius:50%;background:#263042;transition:transform .25s, background .25s}
@@ -92,7 +93,7 @@
   <div class="app" id="app">
     <header>
       <div class="brand" style="display:flex;align-items:center;gap:10px">
-        <!-- Use local logo in repo root; fallback placeholder if missing -->
+        <!-- Local logo in repo root; fallback placeholder if missing -->
         <img class="logo" alt="UrbanEye logo"
              style="width:36px;height:36px;border-radius:10px;border:1px solid #1f2937;object-fit:cover;box-shadow:0 6px 18px rgba(0,0,0,.25)"
              src="./urbaneye.png"
@@ -177,36 +178,42 @@
   <div class="blob b2"></div>
 
   <script>
-    // Safe helper to avoid charts killing UI if they error
+    // small helper so chart errors never break UI
     const safe = (fn)=>{ try{ fn(); }catch(e){ console.warn(e); } };
 
     window.addEventListener('DOMContentLoaded', () => {
-      const track = document.getElementById('track');
-      const dots  = Array.from(document.querySelectorAll('.dot'));
-      const tabs  = Array.from(document.querySelectorAll('.tab'));
-      const panels= Array.from(document.querySelectorAll('.panel'));
-      const viewport = document.getElementById('viewport');
+      const track   = document.getElementById('track');
+      const dots    = Array.from(document.querySelectorAll('.dot'));
+      const tabs    = Array.from(document.querySelectorAll('.tab'));
+      const panels  = Array.from(document.querySelectorAll('.panel'));
+      const viewport= document.getElementById('viewport');
       const navLeft = document.getElementById('navLeft');
       const navRight= document.getElementById('navRight');
+
+      // dynamic width (future-proof if you add panels)
+      track.style.width = `${panels.length * 100}%`;
+      panels.forEach(p => p.style.width = '100%');
 
       const THEMES = [
         { accent:getComputedStyle(document.documentElement).getPropertyValue('--accentHealth'), bg1:'#140b0b', bg2:'#120c10' },
         { accent:getComputedStyle(document.documentElement).getPropertyValue('--accentEnergy'), bg1:'#130f08', bg2:'#12100b' },
-        { accent:getComputedStyle(document.documentElement).getPropertyValue('--accentWater'),  bg1:'#0a1018', bg2:'#0a1420' },
-        { accent:getComputedStyle(document.documentElement).getPropertyValue('--accentWaste'),  bg1:'#0b120d', bg2:'#0b1610' }
+        { accent:getComputedStyle(document.documentElement).getPropertyValue('--accentWater') , bg1:'#0a1018', bg2:'#0a1420' },
+        { accent:getComputedStyle(document.documentElement).getPropertyValue('--accentWaste') , bg1:'#0b120d', bg2:'#0b1610' }
       ];
 
       let index = 0;
+      let isAnimating = false;
+      const TRANSITION_MS = 450;
 
       function applyTheme(){
-        const t = THEMES[index];
+        const t = THEMES[index] || THEMES[0];
         document.documentElement.style.setProperty('--accent', t.accent);
         document.documentElement.style.setProperty('--bg', t.bg1);
         document.documentElement.style.setProperty('--bg2', t.bg2);
       }
 
       function render(){
-        track.style.transform = `translateX(${-100*index}%)`;
+        track.style.transform = `translateX(${-100 * index}%)`;
         dots.forEach((d,i)=>d.classList.toggle('active', i===index));
         tabs.forEach((t,i)=>t.classList.toggle('active', i===index));
         panels.forEach((p,i)=>p.classList.toggle('active', i===index));
@@ -214,32 +221,38 @@
       }
       render();
 
-      function go(dir){ index = (index + dir + 4) % 4; render(); }
+      function go(dir){
+        if (isAnimating) return; // debounce while sliding
+        isAnimating = true;
+        index = (index + dir + panels.length) % panels.length;
+        render();
+        setTimeout(()=>{ isAnimating = false; }, TRANSITION_MS + 60);
+      }
 
       // controls
       window.addEventListener('keydown', e=>{
-        if(e.key==='ArrowRight'){ e.preventDefault(); go(1); }
-        if(e.key==='ArrowLeft'){ e.preventDefault(); go(-1); }
+        if(e.key==='ArrowRight'){ e.preventDefault(); go(+1); }
+        if(e.key==='ArrowLeft' ){ e.preventDefault(); go(-1); }
       });
-      tabs.forEach((t,i)=>t.addEventListener('click', ()=>{ index=i; render(); }));
-      dots.forEach((d,i)=>d.addEventListener('click', ()=>{ index=i; render(); }));
-      navLeft.addEventListener('click', ()=>go(-1));
-      navRight.addEventListener('click', ()=>go(1));
+      tabs.forEach((t,i)=>t.addEventListener('click', ()=>{ if(!isAnimating){ index=i; render(); } }));
+      dots.forEach((d,i)=>d.addEventListener('click', ()=>{ if(!isAnimating){ index=i; render(); } }));
+      navLeft .addEventListener('click', ()=>go(-1));
+      navRight.addEventListener('click', ()=>go(+1));
 
       // swipe
-      let startX=null;
-      viewport.addEventListener('pointerdown', e=>{ startX=e.clientX; });
-      viewport.addEventListener('pointerup', e=>{
+      let startX = null;
+      viewport.addEventListener('pointerdown', e=>{ startX = e.clientX; });
+      viewport.addEventListener('pointerup',   e=>{
         if(startX===null) return;
         const dx = e.clientX - startX;
-        if(Math.abs(dx) > 40) go(dx<0?1:-1);
-        startX=null;
+        startX = null;
+        if(Math.abs(dx) > 40) go(dx < 0 ? +1 : -1);
       });
-      viewport.addEventListener('pointerleave', ()=>{ startX=null; });
+      viewport.addEventListener('pointerleave', ()=>{ startX = null; });
 
-      // charts once Chart.js is ready
-      const readyCharts = () => {
-        if(!window.Chart) { setTimeout(readyCharts, 50); return; }
+      // charts (when Chart.js is ready)
+      (function readyCharts(){
+        if(!window.Chart){ setTimeout(readyCharts, 50); return; }
 
         Chart.defaults.animations = {
           colors:{type:'color',duration:800},
@@ -279,22 +292,21 @@
               backgroundColor:getComputedStyle(document.documentElement).getPropertyValue('--accentWaste')}]},
           options:{plugins:{legend:{display:false}}}
         }));
-      };
-      readyCharts();
+      })();
 
       // mock bins
-      const binsRow=document.getElementById("binsRow");
+      const binsRow = document.getElementById("binsRow");
       Array.from({length:12}).forEach((_,i)=>{
-        const fill=Math.floor(20+Math.random()*75);
-        const el=document.createElement("div");
-        el.className="badge";
-        el.innerHTML=`Bin #${String(i+1).padStart(2,'0')} — <span class="${fill>80?'bad':fill>60?'warn':'good'}">${fill}%</span>`;
+        const fill = Math.floor(20 + Math.random()*75);
+        const el = document.createElement("div");
+        el.className = "badge";
+        el.innerHTML = `Bin #${String(i+1).padStart(2,'0')} — <span class="${fill>80?'bad':fill>60?'warn':'good'}">${fill}%</span>`;
         binsRow.appendChild(el);
       });
 
-      // loader hide (failsafe after 1.2s)
-      const loader=document.getElementById('loader');
-      setTimeout(()=>loader.classList.add('hide'), 1200);
+      // loader hide (failsafe)
+      const loader = document.getElementById('loader');
+      setTimeout(()=> loader && loader.classList.add('hide'), 1200);
     });
   </script>
 </body>
