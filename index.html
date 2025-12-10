@@ -30,8 +30,13 @@
 
     .viewport{position:relative;overflow:hidden;flex:1;user-select:none;z-index:1}
     .track{display:flex;height:100%;width:400%;transition:transform .45s cubic-bezier(.22,.61,.36,1)}
-    .panel{width:100%;padding:16px;display:grid;grid-template-rows:auto auto 1fr;gap:14px;opacity:0;transform:translateY(8px);transition:opacity .45s ease, transform .45s ease}
-    .panel.active{opacity:1;transform:translateY(0)}
+
+    /* Always visible panels (no blank pages) */
+    .panel{
+      width:100%;padding:16px;display:grid;grid-template-rows:auto auto 1fr;gap:14px;
+      opacity:1;transform:none;transition:opacity .45s ease, transform .45s ease;
+    }
+    .panel.active{transform:translateY(0)}
     h2{margin:0;font-size:18px;letter-spacing:.4px}
     .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 
@@ -87,8 +92,11 @@
   <div class="app" id="app">
     <header>
       <div class="brand" style="display:flex;align-items:center;gap:10px">
-        <img class="logo" alt="UrbanEye logo" style="width:36px;height:36px;border-radius:10px;border:1px solid #1f2937;object-fit:cover;box-shadow:0 6px 18px rgba(0,0,0,.25)"
-             src="https://raw.githubusercontent.com/dkk2011/Urban-eye-/main/urbaneye.png">
+        <!-- Use local logo in repo root; fallback placeholder if missing -->
+        <img class="logo" alt="UrbanEye logo"
+             style="width:36px;height:36px;border-radius:10px;border:1px solid #1f2937;object-fit:cover;box-shadow:0 6px 18px rgba(0,0,0,.25)"
+             src="./urbaneye.png"
+             onerror="this.onerror=null; this.src='https://dummyimage.com/72x72/0b1321/ffffff&text=UE';">
         <div class="title">UrbanEye</div>
       </div>
       <div class="tabs">
@@ -164,7 +172,14 @@
     <button id="navRight">▶</button>
   </div>
 
+  <!-- accent blobs behind everything -->
+  <div class="blob b1"></div>
+  <div class="blob b2"></div>
+
   <script>
+    // Safe helper to avoid charts killing UI if they error
+    const safe = (fn)=>{ try{ fn(); }catch(e){ console.warn(e); } };
+
     window.addEventListener('DOMContentLoaded', () => {
       const track = document.getElementById('track');
       const dots  = Array.from(document.querySelectorAll('.dot'));
@@ -222,50 +237,50 @@
       });
       viewport.addEventListener('pointerleave', ()=>{ startX=null; });
 
-      // charts (after Chart.js loads)
-      function chartsReady(){
-        if(!window.Chart) { setTimeout(chartsReady, 50); return; }
+      // charts once Chart.js is ready
+      const readyCharts = () => {
+        if(!window.Chart) { setTimeout(readyCharts, 50); return; }
 
         Chart.defaults.animations = {
           colors:{type:'color',duration:800},
           numbers:{type:'number',duration:800,easing:'easeOutQuart'}
         };
 
-        new Chart(document.getElementById('chartHealth'),{
+        safe(()=> new Chart(document.getElementById('chartHealth'),{
           type:'line',
           data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
             datasets:[{label:'AQI',data:[132,118,141,155,162,149,138],
               borderColor:getComputedStyle(document.documentElement).getPropertyValue('--accentHealth'),
               backgroundColor:'rgba(248,113,113,.15)', tension:.35, fill:true}]},
           options:{plugins:{legend:{display:false}}}
-        });
+        }));
 
-        new Chart(document.getElementById('chartEnergy'),{
+        safe(()=> new Chart(document.getElementById('chartEnergy'),{
           type:'bar',
           data:{labels:[...Array(24)].map((_,i)=>`${String(i).padStart(2,'0')}:00`),
             datasets:[{data:[...Array(24)].map((_,i)=>Math.round((Math.sin((i-8)/3)*8+14 + (i===15?6:0))*10)/10),
               backgroundColor:getComputedStyle(document.documentElement).getPropertyValue('--accentEnergy')}]},
           options:{plugins:{legend:{display:false}}}
-        });
+        }));
 
-        new Chart(document.getElementById('chartWater'),{
+        safe(()=> new Chart(document.getElementById('chartWater'),{
           type:'line',
           data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
             datasets:[{data:[2.4,2.1,2.6,2.2,2.7,3.1,2.8],
               borderColor:getComputedStyle(document.documentElement).getPropertyValue('--accentWater'),
               backgroundColor:'rgba(96,165,250,.18)', tension:.35, fill:true}]},
           options:{plugins:{legend:{display:false}}}
-        });
+        }));
 
-        new Chart(document.getElementById('chartWaste'),{
+        safe(()=> new Chart(document.getElementById('chartWaste'),{
           type:'bar',
           data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
             datasets:[{data:[170,162,175,168,182,196,188],
               backgroundColor:getComputedStyle(document.documentElement).getPropertyValue('--accentWaste')}]},
           options:{plugins:{legend:{display:false}}}
-        });
-      }
-      chartsReady();
+        }));
+      };
+      readyCharts();
 
       // mock bins
       const binsRow=document.getElementById("binsRow");
@@ -284,5 +299,3 @@
   </script>
 </body>
 </html>
-
-
