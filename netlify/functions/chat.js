@@ -1,39 +1,43 @@
-// netlify/functions/chat.js
+// Minimal Netlify Function proxy to Gemini (text-only, no streaming).
 export async function handler(event) {
-  const headers = {
-    "Access-Control-Allow-Origin": "*",
+  const cors = {
+    "Access-Control-Allow-Origin": "*",            // for testing; lock to your domain later
     "Access-Control-Allow-Headers": "Content-Type, Authorization",
     "Access-Control-Allow-Methods": "POST, OPTIONS"
   };
 
+  // CORS preflight
   if (event.httpMethod === "OPTIONS") {
-    return { statusCode: 204, headers };
+    return { statusCode: 204, headers: cors };
   }
+
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, headers, body: "Method Not Allowed" };
+    return { statusCode: 405, headers: cors, body: "Method Not Allowed" };
   }
 
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      return { statusCode: 500, headers, body: "Missing GEMINI_API_KEY" };
+      return { statusCode: 500, headers: cors, body: "Missing GEMINI_API_KEY" };
     }
 
-    const { messages = [] } = JSON.parse(event.body || "{}");
+    const body = JSON.parse(event.body || "{}");
+    const messages = Array.isArray(body.messages) ? body.messages : [];
 
-    // Convert simple {role, content}[] into Gemini REST "contents"
+    // Convert simple chat history to Gemini "contents"
     const contents = messages.map(m => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: String(m.content || "") }]
     }));
 
-    // Add a short system prompt to keep replies focused on UrbanEye
+    // Short system nudge (as a leading user turn)
     contents.unshift({
       role: "user",
-      parts: [{ text: "You are UrbanEye assistant. Be concise and helpful about Health, Energy, Water, and Waste panels." }]
+      parts: [{ text: "You are UrbanEye’s assistant. Be concise and helpful about Health, Energy, Water, and Waste panels." }]
     });
 
-    const model = "gemini-1.5-pro";
+    // Fast & cheap model
+    const model = "gemini-2.0-flash";
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
     const resp = await fetch(url, {
@@ -43,21 +47,22 @@ export async function handler(event) {
     });
 
     if (!resp.ok) {
-      const t = await resp.text();
-      return { statusCode: 500, headers, body: `Gemini error: ${t}` };
+      const text = await resp.text();
+      return { statusCode: 500, headers: cors, body: `Gemini error: ${text}` };
     }
 
     const data = await resp.json();
-    const text =
+    const reply =
       data?.candidates?.[0]?.content?.parts?.map(p => p.text).join("") ||
       "Sorry, I couldn't generate a response.";
 
     return {
       statusCode: 200,
-      headers: { ...headers, "Content-Type": "application/json" },
-      body: JSON.stringify({ reply: text })
+      headers: { ...cors, "Content-Type": "application/json" },
+      body: JSON.stringify({ reply })
     };
   } catch (err) {
-    return { statusCode: 500, headers, body: `Server error: ${err}` };
+    return { statusCode: 500, headers: cors, body: `Server error: ${err}` };
   }
 }
+
