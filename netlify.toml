@@ -1,7 +1,7 @@
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = []
 
+# (optional) You can skip these headers since we set CORS in the function too.
 [[headers]]
   for = "/.netlify/functions/*"
   [headers.values]
