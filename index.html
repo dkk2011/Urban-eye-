@@ -16,7 +16,7 @@
       --bg:#0b0f17; --bg2:#0c1320;
       --text:#e5e7eb; --muted:#9aa3b2; --ring:#1f2937;
       --good:#10b981; --warn:#f59e0b; --bad:#ef4444;
-      --accent:#60a5fa; /* default */
+      --accent:#60a5fa;
       --accentHealth:#f87171; --accentEnergy:#f59e0b; --accentWater:#60a5fa; --accentWaste:#34d399;
     }
 
@@ -28,15 +28,19 @@
     .title{font-weight:700;letter-spacing:.5px}
     .pill{font-size:12px;color:#a7b0c0;border:1px solid #1f2937;border-radius:999px;padding:6px 10px;background:#0d1320}
 
+    /* Fade-only view */
     .viewport{position:relative;overflow:hidden;flex:1;user-select:none;z-index:1}
-    .track{display:flex;height:100%;transition:transform .45s cubic-bezier(.22,.61,.36,1)}
-
-    /* Always-visible panels to avoid blank states */
+    .track{position:relative;height:100%;width:100%;}
     .panel{
-      width:100%;padding:16px;display:grid;grid-template-rows:auto auto 1fr;gap:14px;
-      opacity:1;transform:none;transition:opacity .45s ease, transform .45s ease;
+      position:absolute; inset:0;
+      width:100%; height:100%;
+      padding:16px;
+      display:grid; grid-template-rows:auto auto 1fr; gap:14px;
+      opacity:0; pointer-events:none;
+      transition:opacity .45s ease;
     }
-    .panel.active{transform:translateY(0)}
+    .panel.active{opacity:1; pointer-events:auto}
+
     h2{margin:0;font-size:18px;letter-spacing:.4px}
     .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 
@@ -62,7 +66,7 @@
     .kpi{flex:1 1 130px}
     .hero{display:flex;justify-content:space-between;align-items:center}
 
-    /* Floating accent blobs + loader */
+    /* Animated blobs + loader */
     .blob{position:fixed;width:60vmax;height:60vmax;border-radius:50%;filter:blur(48px);pointer-events:none;z-index:0;opacity:.12;mix-blend:screen}
     .b1{left:-10vmax;top:-10vmax;background:radial-gradient(circle at 40% 40%, var(--accent), transparent 60%);animation:floatBlob 12s ease-in-out infinite}
     .b2{right:-12vmax;bottom:-14vmax;background:radial-gradient(circle at 60% 60%, var(--accent), transparent 60%);animation:floatBlob 14s ease-in-out reverse infinite}
@@ -74,7 +78,7 @@
     @keyframes fadeOut{to{opacity:0;visibility:hidden}}
 
     @media (prefers-reduced-motion: reduce){
-      .track,.panel,.card{transition:none}
+      .panel,.card{transition:none}
       .blob{display:none}
       #loader.hide{animation:none;display:none}
     }
@@ -93,11 +97,11 @@
   <div class="app" id="app">
     <header>
       <div class="brand" style="display:flex;align-items:center;gap:10px">
-        <!-- Local logo in repo root; fallback placeholder if missing -->
+        <!-- Local logo in repo root; bigger, no frame -->
         <img class="logo" alt="UrbanEye logo"
-             style="width:36px;height:36px;border-radius:10px;border:1px solid #1f2937;object-fit:cover;box-shadow:0 6px 18px rgba(0,0,0,.25)"
+             style="width:72px;height:72px;object-fit:contain;border:none;box-shadow:none"
              src="./urbaneye.png"
-             onerror="this.onerror=null; this.src='https://dummyimage.com/72x72/0b1321/ffffff&text=UE';">
+             onerror="this.onerror=null; this.src='https://dummyimage.com/140x140/0b1321/ffffff&text=UE';">
         <div class="title">UrbanEye</div>
       </div>
       <div class="tabs">
@@ -178,21 +182,15 @@
   <div class="blob b2"></div>
 
   <script>
-    // small helper so chart errors never break UI
     const safe = (fn)=>{ try{ fn(); }catch(e){ console.warn(e); } };
 
     window.addEventListener('DOMContentLoaded', () => {
-      const track   = document.getElementById('track');
       const dots    = Array.from(document.querySelectorAll('.dot'));
       const tabs    = Array.from(document.querySelectorAll('.tab'));
       const panels  = Array.from(document.querySelectorAll('.panel'));
       const viewport= document.getElementById('viewport');
       const navLeft = document.getElementById('navLeft');
       const navRight= document.getElementById('navRight');
-
-      // dynamic width (future-proof if you add panels)
-      track.style.width = `${panels.length * 100}%`;
-      panels.forEach(p => p.style.width = '100%');
 
       const THEMES = [
         { accent:getComputedStyle(document.documentElement).getPropertyValue('--accentHealth'), bg1:'#140b0b', bg2:'#120c10' },
@@ -213,7 +211,6 @@
       }
 
       function render(){
-        track.style.transform = `translateX(${-100 * index}%)`;
         dots.forEach((d,i)=>d.classList.toggle('active', i===index));
         tabs.forEach((t,i)=>t.classList.toggle('active', i===index));
         panels.forEach((p,i)=>p.classList.toggle('active', i===index));
@@ -222,7 +219,7 @@
       render();
 
       function go(dir){
-        if (isAnimating) return; // debounce while sliding
+        if (isAnimating) return;
         isAnimating = true;
         index = (index + dir + panels.length) % panels.length;
         render();
@@ -250,7 +247,7 @@
       });
       viewport.addEventListener('pointerleave', ()=>{ startX = null; });
 
-      // charts (when Chart.js is ready)
+      // charts when Chart.js ready
       (function readyCharts(){
         if(!window.Chart){ setTimeout(readyCharts, 50); return; }
 
@@ -304,7 +301,7 @@
         binsRow.appendChild(el);
       });
 
-      // loader hide (failsafe)
+      // hide loader
       const loader = document.getElementById('loader');
       setTimeout(()=> loader && loader.classList.add('hide'), 1200);
     });
