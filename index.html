@@ -3,275 +3,154 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>UrbanEye — Swipeable Dashboard (Mock Data)</title>
+  <title>UrbanEye — Dashboard</title>
+
+  <!-- Fonts & Chart.js -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
   <style>
-    :root{$1 --accentHealth:#f87171; --accentEnergy:#f59e0b; --accentWater:#60a5fa; --accentWaste:#34d399; --bg1:#0a0e16; --bg2:#0c1320}
-    body{background:linear-gradient(180deg,var(--bg1),var(--bg2))}
-    .accent{color:var(--accent)}
-    .tab.active{border-color:rgba(255,255,255,.2)}
-    .viewport, .panel, .card, canvas{user-select:none; -webkit-user-select:none; -ms-user-select:none}
-    canvas{pointer-events:auto}
-    
+    :root{
+      --bg:#0b0f17; --bg2:#0c1320;
+      --text:#e5e7eb; --muted:#9aa3b2; --ring:#1f2937;
+      --good:#10b981; --warn:#f59e0b; --bad:#ef4444;
+      --accent:#60a5fa; /* default */
+      --accentHealth:#f87171; --accentEnergy:#f59e0b; --accentWater:#60a5fa; --accentWaste:#34d399;
+    }
+
     *{box-sizing:border-box}
-    html,body{height:100%;margin:0;background:linear-gradient(180deg,#0a0e16,#0c1320);color:var(--text);font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial}
+    html,body{height:100%;margin:0;background:linear-gradient(180deg,var(--bg),var(--bg2));color:var(--text);font-family:Inter,system-ui}
     .app{height:100%;display:flex;flex-direction:column}
+
     header{padding:16px 20px;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #111827;background:rgba(17,24,39,.6);backdrop-filter:blur(6px);position:sticky;top:0;z-index:10}
     .title{font-weight:700;letter-spacing:.5px}
     .pill{font-size:12px;color:#a7b0c0;border:1px solid #1f2937;border-radius:999px;padding:6px 10px;background:#0d1320}
-    .viewport{position:relative;overflow:hidden;flex:1}
+
+    .viewport{position:relative;overflow:hidden;flex:1;user-select:none;z-index:1}
     .track{display:flex;height:100%;width:400%;transition:transform .45s cubic-bezier(.22,.61,.36,1)}
-    .panel{width:100%;padding:16px;display:grid;grid-template-rows:auto auto 1fr;gap:14px}
+    .panel{width:100%;padding:16px;display:grid;grid-template-rows:auto auto 1fr;gap:14px;opacity:0;transform:translateY(8px);transition:opacity .45s ease, transform .45s ease}
+    .panel.active{opacity:1;transform:translateY(0)}
     h2{margin:0;font-size:18px;letter-spacing:.4px}
     .grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-    .card{background:linear-gradient(180deg,#0d1626,#0b1321);border:1px solid var(--ring);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+
+    .card{background:linear-gradient(180deg,#0d1626,#0b1321);border:1px solid var(--ring);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.25);transition:transform .25s, box-shadow .25s}
+    .card:hover{transform:translateY(-3px); box-shadow:0 16px 40px rgba(0,0,0,.35)}
     .metric{display:flex;align-items:baseline;gap:8px}
     .metric .value{font-size:26px;font-weight:700}
     .metric .unit{font-size:12px;color:var(--muted)}
     .label{font-size:12px;color:#9aa3b2;text-transform:uppercase;letter-spacing:.18em;margin-bottom:8px}
     canvas{width:100%!important;height:260px!important}
     .subgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-    .badge{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--ring);background:#0c1423;color:#aab3c2}
+    .badge{font-size:12px;padding:6px 10px;border-radius:999px;border:1px solid var(--ring);background:#0c1423;color:#cbd5e1}
     .good{color:var(--good)} .warn{color:var(--warn)} .bad{color:var(--bad)}
+
     footer{display:flex;justify-content:center;gap:8px;padding:10px 0 14px}
-    .dot{width:8px;height:8px;border-radius:50%;background:#263042;transition:all .25s}
+    .dot{width:8px;height:8px;border-radius:50%;background:#263042;transition:transform .25s, background .25s}
     .dot.active{background:var(--accent);transform:scale(1.2)}
     .tabs{display:flex;gap:8px}
-    .tab{font-size:12px;padding:8px 10px;border-radius:12px;border:1px solid var(--ring);color:#c8d1df;background:#0b1321}
-    .muted{color:var(--muted)}
+    .tab{font-size:12px;padding:8px 10px;border-radius:12px;border:1px solid var(--ring);color:#e5e7eb;background:#0b1321;opacity:.75;transition:opacity .25s,border-color .25s}
+    .tab.active{opacity:1;border-color:#2a3a55}
     .row{display:flex;gap:10px;flex-wrap:wrap}
     .kpi{flex:1 1 130px}
     .hero{display:flex;justify-content:space-between;align-items:center}
-    /* --- Animations & Visual Enhancements --- */
-  .card{transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease}
-  .card:hover{transform:translateY(-3px); box-shadow:0 16px 40px rgba(0,0,0,.35)}
-  .panel{opacity:0; transform:translateY(8px); transition:opacity .45s ease, transform .45s ease}
-  .panel.active{opacity:1; transform:translateY(0)}
-  .dot{transition:transform .25s ease, background .25s ease}
-  .dot.active{transform:scale(1.2)}
-  .tabs .tab{transition:opacity .25s ease, border-color .25s ease}
 
-  /* Floating accent blobs */
-  .blob{position:fixed; inset:auto; width:60vmax; height:60vmax; border-radius:50%; filter:blur(48px); pointer-events:none; z-index:0; opacity:.12; mix-ble </head>
-<body>
+    /* Floating accent blobs + loader */
+    .blob{position:fixed;width:60vmax;height:60vmax;border-radius:50%;filter:blur(48px);pointer-events:none;z-index:0;opacity:.12;mix-blend:screen}
+    .b1{left:-10vmax;top:-10vmax;background:radial-gradient(circle at 40% 40%, var(--accent), transparent 60%);animation:floatBlob 12s ease-in-out infinite}
+    .b2{right:-12vmax;bottom:-14vmax;background:radial-gradient(circle at 60% 60%, var(--accent), transparent 60%);animation:floatBlob 14s ease-in-out reverse infinite}
+    @keyframes floatBlob{0%{transform:translate(0,0) scale(1)}50%{transform:translate(2vmax,-1vmax) scale(1.05)}100%{transform:translate(0,0) scale(1)}}
 
-  <!-- Decorative animated blobs + loader -->
-  <div class="blob b1"></div>
-  <div class="blob b2"></div>
-  <div id="loader"><span>UrbanEye</span></div>isual Enhancements --- */
-  .card{transition:transform .25s ease, box-shadow .25s ease, border-color .25s ease}
-  .card:hover{transform:translateY(-3px); box-shadow:0 16px 40px rgba(0,0,0,.35)}
-  .panel{opacity:0; transform:translateY(8px); transition:opacity .45s ease, transform .45s ease}
-  .panel.active{opacity:1; transform:translateY(0)}
-  .dot{transition:transform .25s ease, background .25s ease}
-  .dot.active{transform:scale(1.2)}
-  .tabs .tab{transition:opacity .25s ease, border-color .25s ease}
+    #loader{position:fixed;inset:0;display:grid;place-items:center;background:rgba(8,12,20,.94);z-index:50;color:var(--text);font-weight:700;letter-spacing:.06em}
+    #loader span{padding:14px 18px;border:1px solid var(--ring);border-radius:14px;background:linear-gradient(180deg,#0f172a,#0b1321);box-shadow:0 10px 30px rgba(0,0,0,.35)}
+    #loader.hide{animation:fadeOut .5s ease forwards}
+    @keyframes fadeOut{to{opacity:0;visibility:hidden}}
 
-  /* Floating accent blobs */
-  .blob{position:fixed; inset:auto; width:60vmax; height:60vmax; border-radius:50%; filter:blur(48px); pointer-events:none; z-index:0; opacity:.12; mix-blend:screen}
-  .blob.b1{left:-10vmax; top:-10vmax; background:radial-gradient(circle at 40% 40%, var(--accent), transparent 60%); animation:floatBlob 12s ease-in-out infinite}
-  .blob.b2{right:-12vmax; bottom:-14vmax; background:radial-gradient(circle at 60% 60%, var(--accent), transparent 60%); animation:floatBlob 14s ease-in-out reverse infinite}
-  @keyframes floatBlob{0%{transform:translate(0,0) scale(1)}50%{transform:translate(2vmax,-1vmax) scale(1.05)}100%{transform:translate(0,0) scale(1)}}
+    @media (prefers-reduced-motion: reduce){
+      .track,.panel,.card{transition:none}
+      .blob{display:none}
+      #loader.hide{animation:none;display:none}
+    }
 
-  /* Loader */
-  #loader{position:fixed;inset:0;display:grid;place-items:center;background:rgba(8,12,20,.94);z-index:50;color:var(--text);font-weight:700;letter-spacing:.06em}
-  #loader span{padding:14px 18px;border:1px solid var(--ring);border-radius:14px;background:linear-gradient(180deg,#0f172a,#0b1321);box-shadow:0 10px 30px rgba(0,0,0,.35)}
-  #loader.hide{animation:fadeOut .5s ease forwards}
-  @keyframes fadeOut{to{opacity:0;visibility:hidden}}
-
-  /* Respect reduced motion */
-  @media (prefers-reduced-motion: reduce){
-    .track{transition:none}
-    .panel{transition:none}
-    .card{transition:none}
-    .blob{display:none}
-    #loader.hide{animation:none; display:none}
-  }
-</style>
+    /* nav buttons */
+    #navLeft,#navRight{position:fixed;bottom:70px;z-index:20;background:#0b1321;border:1px solid #1f2937;border-radius:999px;padding:10px 14px;color:#e5e7eb;box-shadow:0 8px 24px rgba(0,0,0,.35)}
+    #navLeft{left:14px} #navRight{right:14px}
+  </style>
 </head>
 <body>
-
-  <!-- Decorative animated blobs + loader -->
+  <!-- blobs + loader -->
   <div class="blob b1"></div>
   <div class="blob b2"></div>
   <div id="loader"><span>UrbanEye</span></div>
+
   <div class="app" id="app">
     <header>
       <div class="brand" style="display:flex;align-items:center;gap:10px">
-        <img class="logo" alt="UrbanEye logo" style="width:36px;height:36px;border-radius:10px;border:1px solid #1f2937;object-fit:cover;box-shadow:0 6px 18px rgba(0,0,0,.25)" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAQACAIAAADwf7zUAAAQAElEQVR4AYz8i2Iju45ECwZ8//+Py+KsFWBK8j59Z4YbBAOBB0aS8xP5r1b0o0l2HfX9nY6b7M/6m...">
+        <img class="logo" alt="UrbanEye logo" style="width:36px;height:36px;border-radius:10px;border:1px solid #1f2937;object-fit:cover;box-shadow:0 6px 18px rgba(0,0,0,.25)"
+             src="https://raw.githubusercontent.com/dkk2011/Urban-eye-/main/urbaneye.png">
         <div class="title">UrbanEye</div>
       </div>
       <div class="tabs">
-        <div class="tab">Health</div>
-        <div class="tab">Energy</div>
-        <div class="tab">Water</div>
-        <div class="tab">Waste</div>
+        <div class="tab">Health</div><div class="tab">Energy</div><div class="tab">Water</div><div class="tab">Waste</div>
       </div>
       <div class="pill">Swipe ◀ ▶ or use ← →</div>
     </header>
 
-    <div class="viewport" id="viewport" style="position:relative; z-index:1">
+    <div class="viewport" id="viewport">
       <div class="track" id="track">
+
         <!-- HEALTH -->
         <section class="panel" data-name="Health">
-          <div class="hero">
-            <h2>Health Overview</h2>
-            <span class="badge">Mock Data</span>
-          </div>
+          <div class="hero"><h2>Health Overview</h2><span class="badge">Mock Data</span></div>
           <div class="grid">
-            <div class="card kpi">
-              <div class="label">AQI</div>
-              <div class="metric"><span class="value bad" id="aqiVal">162</span><span class="unit">US AQI</span></div>
-              <div class="muted">Status: Unhealthy</div>
-            </div>
-            <div class="card kpi">
-              <div class="label">Health Score</div>
-              <div class="metric"><span class="value good" id="healthScore">82</span><span class="unit">/ 100</span></div>
-              <div class="muted">↑ +3 vs last week</div>
-            </div>
-            <div class="card kpi">
-              <div class="label">Water Quality Index</div>
-              <div class="metric"><span class="value warn" id="wqi">74</span><span class="unit">/ 100</span></div>
-              <div class="muted">Stable</div>
-            </div>
-            <div class="card kpi">
-              <div class="label">Noise (Leq)</div>
-              <div class="metric"><span class="value" id="noise">58</span><span class="unit"> dB</span></div>
-              <div class="muted">Acceptable</div>
-            </div>
+            <div class="card kpi"><div class="label">AQI</div><div class="metric"><span class="value bad" id="aqiVal">162</span><span class="unit"> US AQI</span></div><div class="muted">Status: Unhealthy</div></div>
+            <div class="card kpi"><div class="label">Health Score</div><div class="metric"><span class="value good" id="healthScore">82</span><span class="unit"> /100</span></div><div class="muted">↑ +3 vs last week</div></div>
+            <div class="card kpi"><div class="label">Water Quality Index</div><div class="metric"><span class="value warn" id="wqi">74</span><span class="unit"> /100</span></div><div class="muted">Stable</div></div>
+            <div class="card kpi"><div class="label">Noise (Leq)</div><div class="metric"><span class="value" id="noise">58</span><span class="unit"> dB</span></div><div class="muted">Acceptable</div></div>
           </div>
-          <div class="card">
-            <div class="label">Daily AQI Trend</div>
-            <canvas id="chartHealth"></canvas>
-          </div>
-          <div class="row">
-            <div class="badge">PM2.5: 42 µg/m³</div>
-            <div class="badge">PM10: 70 µg/m³</div>
-            <div class="badge">NO₂: 29 ppb</div>
-            <div class="badge">O₃: 18 ppb</div>
-          </div>
+          <div class="card"><div class="label">Daily AQI Trend</div><canvas id="chartHealth"></canvas></div>
+          <div class="row"><div class="badge">PM2.5: 42 µg/m³</div><div class="badge">PM10: 70 µg/m³</div><div class="badge">NO₂: 29 ppb</div><div class="badge">O₃: 18 ppb</div></div>
         </section>
 
         <!-- ENERGY -->
         <section class="panel" data-name="Energy">
-          <div class="hero">
-            <h2>Energy</h2>
-            <span class="badge">Mock Data</span>
-          </div>
+          <div class="hero"><h2>Energy</h2><span class="badge">Mock Data</span></div>
           <div class="grid">
-            <div class="card kpi">
-              <div class="label">Usage (Today)</div>
-              <div class="metric"><span class="value" id="energyToday">128</span><span class="unit"> kWh</span></div>
-              <div class="muted">↓ −6% vs yesterday</div>
-            </div>
-            <div class="card kpi">
-              <div class="label">Peak Demand</div>
-              <div class="metric"><span class="value warn" id="peak">22.4</span><span class="unit"> kW</span></div>
-              <div class="muted">3–4 PM</div>
-            </div>
-            <div class="card kpi">
-              <div class="label">Renewables Share</div>
-              <div class="metric"><span class="value good" id="reShare">46</span><span class="unit">%</span></div>
-              <div class="muted">Solar + Wind</div>
-            </div>
-            <div class="card kpi">
-              <div class="label">CO₂ Intensity</div>
-              <div class="metric"><span class="value" id="co2">412</span><span class="unit"> g/kWh</span></div>
-              <div class="muted">Medium</div>
-            </div>
+            <div class="card kpi"><div class="label">Usage (Today)</div><div class="metric"><span class="value" id="energyToday">128</span><span class="unit"> kWh</span></div><div class="muted">↓ -6% vs yesterday</div></div>
+            <div class="card kpi"><div class="label">Peak Demand</div><div class="metric"><span class="value warn" id="peak">22.4</span><span class="unit"> kW</span></div><div class="muted">3–4 PM</div></div>
+            <div class="card kpi"><div class="label">Renewables Share</div><div class="metric"><span class="value good" id="reShare">46</span><span class="unit"> %</span></div><div class="muted">Solar + Wind</div></div>
+            <div class="card kpi"><div class="label">CO₂ Intensity</div><div class="metric"><span class="value" id="co2">412</span><span class="unit"> g/kWh</span></div><div class="muted">Medium</div></div>
           </div>
-          <div class="card">
-            <div class="label">24h Energy Usage</div>
-            <canvas id="chartEnergy"></canvas>
-          </div>
+          <div class="card"><div class="label">24h Energy Usage</div><canvas id="chartEnergy"></canvas></div>
         </section>
 
         <!-- WATER -->
         <section class="panel" data-name="Water">
-          <div class="hero">
-            <h2>Water</h2>
-            <span class="badge">Mock Data</span>
-          </div>
+          <div class="hero"><h2>Water</h2><span class="badge">Mock Data</span></div>
           <div class="grid">
-            <div class="card kpi">
-              <div class="label">Usage (Today)</div>
-              <div class="metric"><span class="value" id="waterUse">2.8</span><span class="unit"> kL</span></div>
-              <div class="muted">↑ +9% vs yesterday</div>
-            </div>
-            <div class="card kpi">
-              <div class="label">Quality (WQI)</div>
-              <div class="metric"><span class="value good" id="waterWqi">88</span><span class="unit"> / 100</span></div>
-              <div class="muted">Good</div>
-            </div>
-            <div class="card kpi">
-              <div class="label">Leaks Detected</div>
-              <div class="metric"><span class="value bad" id="leaks">1</span><span class="unit"> active</span></div>
-              <div class="muted">Pipe A2</div>
-            </div>
-            <div class="card kpi">
-              <div class="label">Pressure</div>
-              <div class="metric"><span class="value" id="pressure">2.9</span><span class="unit"> bar</span></div>
-              <div class="muted">Stable</div>
-            </div>
+            <div class="card kpi"><div class="label">Usage (Today)</div><div class="metric"><span class="value" id="waterUse">2.8</span><span class="unit"> kL</span></div><div class="muted">↑ +9% vs yesterday</div></div>
+            <div class="card kpi"><div class="label">Quality (WQI)</div><div class="metric"><span class="value good" id="waterWqi">88</span><span class="unit"> /100</span></div><div class="muted">Good</div></div>
+            <div class="card kpi"><div class="label">Leaks Detected</div><div class="metric"><span class="value bad" id="leaks">1</span><span class="unit"> active</span></div><div class="muted">Pipe A2</div></div>
+            <div class="card kpi"><div class="label">Pressure</div><div class="metric"><span class="value" id="pressure">2.9</span><span class="unit"> bar</span></div><div class="muted">Stable</div></div>
           </div>
-          <div class="card">
-            <div class="label">Weekly Water Usage</div>
-            <canvas id="chartWater"></canvas>
-          </div>
+          <div class="card"><div class="label">Weekly Water Usage</div><canvas id="chartWater"></canvas></div>
         </section>
 
         <!-- WASTE -->
         <section class="panel" data-name="Waste">
-          <div class="hero">
-            <h2>Waste</h2>
-            <span class="badge">Mock Data</span>
-          </div>
+          <div class="hero"><h2>Waste</h2><span class="badge">Mock Data</span></div>
           <div class="grid">
-            <div class="card kpi">
-              <div class="label">Total (Today)</div>
-              <div class="metric"><span class="value" id="wasteToday">182</span><span class="unit"> kg</span></div>
-              <div class="muted">↑ +4% vs avg</div>
-            </div>
-            <div class="card kpi">
-              <div class="label">Recycling Rate</div>
-              <div class="metric"><span class="value good" id="recycle">38</span><span class="unit"> %</span></div>
-              <div class="muted">Target 45%</div>
-            </div>
-            <div class="card kpi">
-              <div class="label">Bins Full</div>
-              <div class="metric"><span class="value bad" id="binsFull">3</span><span class="unit"> / 24</span></div>
-              <div class="muted">See live status</div>
-            </div>
-            <div class="card kpi">
-              <div class="label">Collection ETA</div>
-              <div class="metric"><span class="value" id="eta">14:40</span><span class="unit"> IST</span></div>
-              <div class="muted">Route B</div>
-            </div>
+            <div class="card kpi"><div class="label">Total (Today)</div><div class="metric"><span class="value" id="wasteToday">182</span><span class="unit"> kg</span></div><div class="muted">↑ +4% vs avg</div></div>
+            <div class="card kpi"><div class="label">Recycling Rate</div><div class="metric"><span class="value good" id="recycle">38</span><span class="unit"> %</span></div><div class="muted">Target 45%</div></div>
+            <div class="card kpi"><div class="label">Bins Full</div><div class="metric"><span class="value bad" id="binsFull">3</span><span class="unit"> / 24</span></div><div class="muted">See live status</div></div>
+            <div class="card kpi"><div class="label">Collection ETA</div><div class="metric"><span class="value" id="eta">14:40</span><span class="unit"> IST</span></div><div class="muted">Route B</div></div>
           </div>
-          <div class="card">
-            <div class="label">Waste Pattern (7 days)</div>
-            <canvas id="chartWaste"></canvas>
-          </div>
+          <div class="card"><div class="label">Waste Pattern (7 days)</div><canvas id="chartWaste"></canvas></div>
           <div class="subgrid">
-            <div class="card">
-              <div class="label">Live Bin Status</div>
-              <div class="row" id="binsRow"></div>
-            </div>
-            <div class="card">
-              <div class="label">Top Sources</div>
-              <div class="badge">Cafeteria 34%</div>
-              <div class="badge">Hostel 27%</div>
-              <div class="badge">Workshops 21%</div>
-              <div class="badge">Grounds 18%</div>
-            </div>
-            <div class="card">
-              <div class="label">Alerts</div>
-              <div class="muted">Bin #07 at 82% (north gate)</div>
-              <div class="muted">Bin #13 contamination suspected</div>
-            </div>
+            <div class="card"><div class="label">Live Bin Status</div><div class="row" id="binsRow"></div></div>
+            <div class="card"><div class="label">Top Sources</div><div class="badge">Cafeteria 34%</div><div class="badge">Hostel 27%</div><div class="badge">Workshops 21%</div><div class="badge">Grounds 18%</div></div>
+            <div class="card"><div class="label">Alerts</div><div class="muted">Bin #07 at 82% (north gate)</div><div class="muted">Bin #13 contamination suspected</div></div>
           </div>
         </section>
 
@@ -279,126 +158,131 @@
     </div>
 
     <footer>
-      <div class="dot" data-dot="0"></div>
-      <div class="dot" data-dot="1"></div>
-      <div class="dot" data-dot="2"></div>
-      <div class="dot" data-dot="3"></div>
+      <div class="dot" data-dot="0"></div><div class="dot" data-dot="1"></div><div class="dot" data-dot="2"></div><div class="dot" data-dot="3"></div>
     </footer>
-    <button id="navLeft" aria-label="Previous" style="position:fixed;left:14px;bottom:70px;z-index:20;background:#0b1321;border:1px solid #1f2937;border-radius:999px;padding:10px 14px;color:#e5e7eb;box-shadow:0 8px 24px rgba(0,0,0,.35)">◀</button>
-    <button id="navRight" aria-label="Next" style="position:fixed;right:14px;bottom:70px;z-index:20;background:#0b1321;border:1px solid #1f2937;border-radius:999px;padding:10px 14px;color:#e5e7eb;box-shadow:0 8px 24px rgba(0,0,0,.35)">▶</button>
+    <button id="navLeft">◀</button>
+    <button id="navRight">▶</button>
   </div>
 
   <script>
-    // Embed logo as Data URL so the app works as a single file.
-    const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAABAAAAAQACAIAAADwf7zUAAAQAElEQVR4AYz8i2Iju45ECwZ8//+Py+KsFWBK8j59Z4YbBAOBB0aS8xP5r1b0o0l2HfX9nY6b7M/6m...";
-    // --- Simple swipeable panels (looping) ---
-    const track = document.getElementById('track');
-    const dots = Array.from(document.querySelectorAll('.dot'));
-    const tabs = Array.from(document.querySelectorAll('.tab'));
-    const panels = Array.from(document.querySelectorAll('.panel'));
+    window.addEventListener('DOMContentLoaded', () => {
+      const track = document.getElementById('track');
+      const dots  = Array.from(document.querySelectorAll('.dot'));
+      const tabs  = Array.from(document.querySelectorAll('.tab'));
+      const panels= Array.from(document.querySelectorAll('.panel'));
+      const viewport = document.getElementById('viewport');
+      const navLeft = document.getElementById('navLeft');
+      const navRight= document.getElementById('navRight');
 
-    const THEMES = [
-      {name:'Health', accent:getComputedStyle(document.documentElement).getPropertyValue('--accentHealth').trim(), bg1:'#140b0b', bg2:'#120c10'},
-      {name:'Energy', accent:getComputedStyle(document.documentElement).getPropertyValue('--accentEnergy').trim(), bg1:'#130f08', bg2:'#12100b'},
-      {name:'Water',  accent:getComputedStyle(document.documentElement).getPropertyValue('--accentWater').trim(),  bg1:'#0a1018', bg2:'#0a1420'},
-      {name:'Waste',  accent:getComputedStyle(document.documentElement).getPropertyValue('--accentWaste').trim(),  bg1:'#0b120d', bg2:'#0b1610'}
-    ];
+      const THEMES = [
+        { accent:getComputedStyle(document.documentElement).getPropertyValue('--accentHealth'), bg1:'#140b0b', bg2:'#120c10' },
+        { accent:getComputedStyle(document.documentElement).getPropertyValue('--accentEnergy'), bg1:'#130f08', bg2:'#12100b' },
+        { accent:getComputedStyle(document.documentElement).getPropertyValue('--accentWater'),  bg1:'#0a1018', bg2:'#0a1420' },
+        { accent:getComputedStyle(document.documentElement).getPropertyValue('--accentWaste'),  bg1:'#0b120d', bg2:'#0b1610' }
+      ];
 
-    let index = 0; // 0..3
-    function render(){
-    track.style.transform = `translateX(${-100*index}%)`;
-    dots.forEach((d,i)=>d.classList.toggle('active',i===index));
-    tabs.forEach((t,i)=>t.classList.toggle('active',i===index));
-    panels.forEach((p,i)=>p.classList.toggle('active',i===index));
-    const theme = THEMES[index];
-    document.documentElement.style.setProperty('--accent', theme.accent);
-    document.documentElement.style.setProperty('--bg', theme.bg1);
-    document.documentElement.style.setProperty('--bg2', theme.bg2);
-  }
-  render();
+      let index = 0;
 
-    function go(dir){ // dir = +1 / -1
-      index = (index + dir + 4) % 4; render();
-    }
-
-    // Keyboard
-    window.addEventListener('keydown', (e)=>{
-      if(e.key==='ArrowRight'){ e.preventDefault(); go(+1); }
-      if(e.key==='ArrowLeft'){ e.preventDefault(); go(-1); }
-    });
-      if(e.key==='ArrowLeft') go(-1);
-    });
-
-    // Click tabs/dots
-    tabs.forEach((t,i)=>t.addEventListener('click', ()=>{index=i;render();}));
-    document.getElementById('navLeft').addEventListener('click',()=>go(-1));
-    document.getElementById('navRight').addEventListener('click',()=>go(+1));
-    // set logo source
-    try{ document.querySelector('.logo').src = LOGO; }catch(_){}
-    dots.forEach((d,i)=>d.addEventListener('click', ()=>{index=i;render();}));
-
-    // Touch + Mouse swipe
-    let x0=null; const threshold=40; // px
-    viewport.addEventListener('pointerdown', e=>{ x0=e.clientX; });
-    viewport.addEventListener('pointerup', e=>{
-      if(x0===null) return; const dx = e.clientX - x0; x0=null; if(Math.abs(dx)>threshold) go(dx<0?+1:-1);
-    });
-    viewport.addEventListener('pointerleave', ()=>{ x0=null; });
-
-    // Touch fallback (some browsers still fire separate touch events)
-    viewport.addEventListener('touchstart', e=>{ x0=e.touches[0].clientX }, {passive:true});
-    viewport.addEventListener('touchend', e=>{ if(x0===null) return; const dx=e.changedTouches[0].clientX-x0; x0=null; if(Math.abs(dx)>threshold) go(dx<0?+1:-1); }, {passive:true});
-
-    // Wheel (trackpads): swipe horizontally or shift+scroll
-    let wheelLock = false;
-    viewport.addEventListener('wheel', (e)=>{
-      const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : (e.shiftKey ? e.deltaY : 0);
-      if(!wheelLock && Math.abs(dx) > 20){
-        go(dx>0?+1:-1);
-        wheelLock = true; setTimeout(()=>wheelLock=false, 400);
+      function applyTheme(){
+        const t = THEMES[index];
+        document.documentElement.style.setProperty('--accent', t.accent);
+        document.documentElement.style.setProperty('--bg', t.bg1);
+        document.documentElement.style.setProperty('--bg2', t.bg2);
       }
-    }, {passive:true});
 
-    // Chart mocks with nicer animations
-  Chart.defaults.animations = {colors:{type:'color',duration:800,loop:0},numbers:{type:'number',duration:800,easing:'easeOutQuart'}};
+      function render(){
+        track.style.transform = `translateX(${-100*index}%)`;
+        dots.forEach((d,i)=>d.classList.toggle('active', i===index));
+        tabs.forEach((t,i)=>t.classList.toggle('active', i===index));
+        panels.forEach((p,i)=>p.classList.toggle('active', i===index));
+        applyTheme();
+      }
+      render();
 
-  new Chart(chartHealth,{type:'line',data:{
-    labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-    datasets:[{label:'AQI',data:[132,118,141,155,162,149,138],
-      borderColor:THEMES[0].accent, backgroundColor:'rgba(248,113,113,.15)', tension:.35, fill:true}]
-  },options:{plugins:{legend:{display:false}},animation:{duration:900}});
+      function go(dir){ index = (index + dir + 4) % 4; render(); }
 
-  new Chart(chartEnergy,{type:'bar',data:{
-    labels:[...Array(24)].map((_,i)=>`${i.toString().padStart(2,'0')}:00`),
-    datasets:[{data:[...Array(24)].map((_,i)=>Math.round((Math.sin((i-8)/3)*8+14 + (i===15?6:0))*10)/10), backgroundColor:THEMES[1].accent}]
-  },options:{plugins:{legend:{display:false}},animation:{duration:900}});
+      // controls
+      window.addEventListener('keydown', e=>{
+        if(e.key==='ArrowRight'){ e.preventDefault(); go(1); }
+        if(e.key==='ArrowLeft'){ e.preventDefault(); go(-1); }
+      });
+      tabs.forEach((t,i)=>t.addEventListener('click', ()=>{ index=i; render(); }));
+      dots.forEach((d,i)=>d.addEventListener('click', ()=>{ index=i; render(); }));
+      navLeft.addEventListener('click', ()=>go(-1));
+      navRight.addEventListener('click', ()=>go(1));
 
-  new Chart(chartWater,{type:'line',data:{
-    labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-    datasets:[{data:[2.4,2.1,2.6,2.2,2.7,3.1,2.8], borderColor:THEMES[2].accent, backgroundColor:'rgba(96,165,250,.18)', tension:.35, fill:true}]
-  },options:{plugins:{legend:{display:false}},animation:{duration:900}});
+      // swipe
+      let startX=null;
+      viewport.addEventListener('pointerdown', e=>{ startX=e.clientX; });
+      viewport.addEventListener('pointerup', e=>{
+        if(startX===null) return;
+        const dx = e.clientX - startX;
+        if(Math.abs(dx) > 40) go(dx<0?1:-1);
+        startX=null;
+      });
+      viewport.addEventListener('pointerleave', ()=>{ startX=null; });
 
-  new Chart(chartWaste,{type:'bar',data:{
-    labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
-    datasets:[{data:[170,162,175,168,182,196,188], backgroundColor:THEMES[3].accent}]
-  },options:{plugins:{legend:{display:false}},animation:{duration:900}});
+      // charts (after Chart.js loads)
+      function chartsReady(){
+        if(!window.Chart) { setTimeout(chartsReady, 50); return; }
 
-  // Bin mock
-  const binsRow=document.getElementById("binsRow");
-  [...Array(12)].forEach((_,i)=>{
-    let fill=Math.floor(20+Math.random()*75);
-    const el=document.createElement("div");
-    el.className="badge";
-    el.innerHTML=`Bin #${String(i+1).padStart(2,'0')} — <span class="${fill>80?'bad':fill>60?'warn':'good'}">${fill}%</span>`;
-    binsRow.appendChild(el);
-  });
+        Chart.defaults.animations = {
+          colors:{type:'color',duration:800},
+          numbers:{type:'number',duration:800,easing:'easeOutQuart'}
+        };
 
-  // Loader hide
-  window.addEventListener('load',()=>{
-    const l=document.getElementById('loader'); if(l) l.classList.add('hide');
-  });
-</script>
+        new Chart(document.getElementById('chartHealth'),{
+          type:'line',
+          data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+            datasets:[{label:'AQI',data:[132,118,141,155,162,149,138],
+              borderColor:getComputedStyle(document.documentElement).getPropertyValue('--accentHealth'),
+              backgroundColor:'rgba(248,113,113,.15)', tension:.35, fill:true}]},
+          options:{plugins:{legend:{display:false}}}
+        });
+
+        new Chart(document.getElementById('chartEnergy'),{
+          type:'bar',
+          data:{labels:[...Array(24)].map((_,i)=>`${String(i).padStart(2,'0')}:00`),
+            datasets:[{data:[...Array(24)].map((_,i)=>Math.round((Math.sin((i-8)/3)*8+14 + (i===15?6:0))*10)/10),
+              backgroundColor:getComputedStyle(document.documentElement).getPropertyValue('--accentEnergy')}]},
+          options:{plugins:{legend:{display:false}}}
+        });
+
+        new Chart(document.getElementById('chartWater'),{
+          type:'line',
+          data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+            datasets:[{data:[2.4,2.1,2.6,2.2,2.7,3.1,2.8],
+              borderColor:getComputedStyle(document.documentElement).getPropertyValue('--accentWater'),
+              backgroundColor:'rgba(96,165,250,.18)', tension:.35, fill:true}]},
+          options:{plugins:{legend:{display:false}}}
+        });
+
+        new Chart(document.getElementById('chartWaste'),{
+          type:'bar',
+          data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+            datasets:[{data:[170,162,175,168,182,196,188],
+              backgroundColor:getComputedStyle(document.documentElement).getPropertyValue('--accentWaste')}]},
+          options:{plugins:{legend:{display:false}}}
+        });
+      }
+      chartsReady();
+
+      // mock bins
+      const binsRow=document.getElementById("binsRow");
+      Array.from({length:12}).forEach((_,i)=>{
+        const fill=Math.floor(20+Math.random()*75);
+        const el=document.createElement("div");
+        el.className="badge";
+        el.innerHTML=`Bin #${String(i+1).padStart(2,'0')} — <span class="${fill>80?'bad':fill>60?'warn':'good'}">${fill}%</span>`;
+        binsRow.appendChild(el);
+      });
+
+      // loader hide (failsafe after 1.2s)
+      const loader=document.getElementById('loader');
+      setTimeout(()=>loader.classList.add('hide'), 1200);
+    });
   </script>
 </body>
 </html>
+
 
